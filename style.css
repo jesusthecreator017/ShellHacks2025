@@ -1,22 +1,9 @@
 html, body {
   margin: 0;
   padding: 0;
-  width: 400px;
+  width: 350px;
   height: 550px;
-}
-
-#main-body{
-    background-color: #669bbc;
-    border-radius: 50px;
-    height: 500px;
-    width: 350px;
-
-    position: absolute;  
-    top: 20px;           
-    right: 20px;         
-
-    padding: 20px;
-    box-sizing: border-box;
+  background-color: #669bbc;
 }
 
 #response-box{
@@ -26,7 +13,7 @@ html, body {
     border-radius: 25px;
     position: absolute;
     top: 30px;
-    left:25px;
+    left: 25px;
     padding-top: 5px;
     border-radius: 25px;
 }
@@ -35,7 +22,7 @@ html, body {
     display: block;          
     margin: 380px auto;      
     width: 80%;             
-    height: 90px;            
+    height: 70px;            
     font-size: 18px;        
     border-radius: 12px;     
     padding: 0 12px;         
@@ -68,7 +55,7 @@ html, body {
 
 #button-1 { 
     left: 230px; 
-    top: 415px;
+    top: 403px;
 }
 
 #button-2 { 
