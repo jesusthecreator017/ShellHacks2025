@@ -20,7 +20,8 @@ html, body {
     top: 30px;
     left: 25px;
     padding-top: 5px;
-    border-radius: 25px;
+    display: block;
+    transition: all 0.2s ease-in-out; 
 }
 
 #response-box, .button{
@@ -76,7 +77,15 @@ html, body {
     top: 315px;
 }
 
+#button-2:hover{
+  background-color: #014b73;
+}
+
 #button-3 { 
     left: 255px; 
     top: 315px;
+}
+
+#button-3:hover{
+  background-color: #014b73;
 }
