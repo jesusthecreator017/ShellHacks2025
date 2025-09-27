@@ -1,0 +1,13 @@
+#main-body{
+    background-color: #023E8A;
+    border-radius: 50px;
+    height: 500px;
+    width: 350px;
+}
+
+#response-box{
+    background-color: #0096C7;
+    height: 350px;
+    width: 300px;
+    border-radius: 25px;
+}
