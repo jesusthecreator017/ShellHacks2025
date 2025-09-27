@@ -1,39 +1,45 @@
 #main-body{
-    background-color: #023E8A;
+    background-color: #669bbc;
     border-radius: 50px;
     height: 500px;
     width: 350px;
+
+    position: absolute;  
+    top: 20px;           
+    right: 20px;         
+
+    padding: 20px;
+    box-sizing: border-box;
 }
 
 #response-box{
-    background-color: #0096C7;
+    background-color: #14213d;
     height: 350px;
     width: 300px;
     border-radius: 25px;
     position: absolute;
-    top: 40px;
-    left:33px;
+    top: 30px;
+    left:25px;
     padding-top: 5px;
     border-radius: 25px;
 }
 
 #textbox input {
-    display: block;          /* places it on its own line */
-    margin: 380px auto;       /* pushes it down & centers horizontally */
-    width: 80%;              /* makes it wide but with some side padding */
-    height: 90px;            /* taller than default */
-    font-size: 18px;         /* bigger text */
-    border-radius: 12px;     /* smooth rounded corners */
-    padding: 0 12px;         /* inner spacing */
+    display: block;          
+    margin: 380px auto;      
+    width: 80%;             
+    height: 90px;            
+    font-size: 18px;        
+    border-radius: 12px;     
+    padding: 0 12px;         
     position: absolute;
     top: -12px;
     left: 32px;
-    border: 2px solid #0077b6;  /* subtle border color */
-    outline: none;           /* removes default highlight */
-    transition: all 0.2s ease-in-out; /* smooth hover/focus */
+    border: 2px solid #0077b6;  
+    outline: none;           
+    transition: all 0.2s ease-in-out; 
   }
   
-  /* Add a nice focus effect */
   #textbox input:focus {
     border-color: #90e0ef;
     box-shadow: 0 0 8px rgba(144, 224, 239, 0.7);
@@ -41,7 +47,7 @@
   
   .button {
     position: absolute;
-    bottom: 20px; /* distance from bottom of main-body */
+    bottom: 20px;
     width: 60px;
     height: 60px;
     border-radius: 12px;
@@ -53,9 +59,17 @@
     font-size: 20px;
   }
 
-  #button-1 { 
-    left: 240px; 
-    top: 430px;
-}
-#button-2 { left: 150px; }
-#button-3 { left: 400px; }
+    #button-1 { 
+        left: 230px; 
+        top: 415px;
+    }
+
+    #button-2 { 
+        left: 180px; 
+        top: 315px;
+    }
+
+    #button-3 { 
+        left: 255px; 
+        top: 315px;
+    }
