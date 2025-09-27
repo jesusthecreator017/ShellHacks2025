@@ -3,7 +3,7 @@ html, body {
   padding: 0;
   width: 350px;
   height: 550px;
-  background-color: #669bbc;
+  background-color: #e0e1dd;
 }
 
 #logo {
@@ -13,7 +13,7 @@ html, body {
 
 #response-box{
     background-color: #14213d;
-    height: 350px;
+    height: 375px;
     width: 300px;
     border-radius: 25px;
     position: absolute;
@@ -31,15 +31,15 @@ html, body {
 #textbox-container input {
     display: block;          
     margin: 380px auto;      
-    width: 80%;             
+    width: 55%;             
     height: 70px;            
     font-size: 18px;        
     border-radius: 12px;     
     padding: 0 12px;         
     position: absolute;
-    top: -12px;
+    top: -80px;
     left: 32px;
-    border: 2px solid #0077b6;  
+    border: 2px solid #1b263b;  
     outline: none;           
     transition: all 0.2s ease-in-out; 
   }
@@ -55,7 +55,7 @@ html, body {
   width: 60px;
   height: 60px;
   border-radius: 12px;
-  background-color: #0077b6;
+  background-color: #415a77;
   color: white;
   display: flex;
   justify-content: center;
@@ -65,7 +65,7 @@ html, body {
 
 #button-1 { 
     left: 230px; 
-    top: 403px;
+    top: 335px;
 }
 
 #button-1:hover{
@@ -73,8 +73,10 @@ html, body {
 }
 
 #button-2 { 
+    margin-left: -150px;
+    width: 40%;
     left: 180px; 
-    top: 315px;
+    top: 415px;
 }
 
 #button-2:hover{
@@ -82,10 +84,25 @@ html, body {
 }
 
 #button-3 { 
-    left: 255px; 
-    top: 315px;
+  margin-left: -75px;
+  left: 255px; 
+  top: 415px;
+  width: 40%;
 }
 
 #button-3:hover{
   background-color: #014b73;
+}
+
+#messages-box{
+  width: 250px;
+  height: 275px;
+  background-color: #778da9;
+  margin-left: 25px;
+  border-radius: 15px;
+
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 15px;
+  box-sizing: border-box;
 }
