@@ -1,8 +1,10 @@
 #ShellHacks2025
 # Pathfinder
 
-A Chrome extension that makes web browsing seamless and intuitive with natural text input.  
-Ask a question like **“Where are my classes?”** on your school website, and Pathfinder highlights the right buttons and guides you step by step — no more endless clicking or getting lost in menus.  
+A Chrome extension that makes web browsing seamless and intuitive by taking in a natural text input request from a user, and then responding with a step-by-step guide on where to find specified information on **any** website.
+Asking a question like **“Where are my classes?”** on your school website, **"How can I print out a package label?"** from the local post office, **"When does my Gym Membership end?"** within your local gym's website, etc has never been easier with Pathfinder.
+
+Pathfinder highlights the right buttons, guides you step by step, and smartly tracks your previous — no more endless clicking or getting lost in menus.  
 
 ---
 
