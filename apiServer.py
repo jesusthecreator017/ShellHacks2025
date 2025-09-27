@@ -1,11 +1,15 @@
 import os
 import asyncio
+from dotenv import load_dotenv
 from google.adk.agents import Agent
 from google.adk.models.lite_llm import LiteLlm
 from google.adk.sessions import InMemorySessionService
 from google.adk.runners import Runner
 from google.genai import types # For creating message Content/Parts
 import warnings
+
+load_dotenv()
+
 # Ignore all warnings
 warnings.filterwarnings("ignore")
 
@@ -200,6 +204,14 @@ async def run_conversation():
     await call_agent_async(
         "DOMAIN: netflix.com\nTASK: cancel subscription\n"
         "Produce 4–8 numbered steps with **bold** UI labels and a safe fallback.",
+        runner=runner,
+        user_id=USER_ID,
+        session_id=SESSION_ID
+    )
+
+    await call_agent_async(
+        "DOMAIN: Walmart.com\n Task: Cancel Walmart Plus Subscription\n"
+        "Provide 3-8 steps on how to",
         runner=runner,
         user_id=USER_ID,
         session_id=SESSION_ID
