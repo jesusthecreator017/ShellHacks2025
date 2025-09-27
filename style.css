@@ -6,6 +6,11 @@ html, body {
   background-color: #669bbc;
 }
 
+#logo {
+  display: block;
+  margin: 0 auto;   /* centers horizontally */
+}
+
 #response-box{
     background-color: #14213d;
     height: 350px;
@@ -16,6 +21,10 @@ html, body {
     left: 25px;
     padding-top: 5px;
     border-radius: 25px;
+}
+
+#response-box, .button{
+  margin-top: 50px;
 }
 
 #textbox input {
