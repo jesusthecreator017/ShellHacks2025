@@ -27,7 +27,7 @@ html, body {
   margin-top: 50px;
 }
 
-#textbox input {
+#textbox-container input {
     display: block;          
     margin: 380px auto;      
     width: 80%;             
@@ -43,7 +43,7 @@ html, body {
     transition: all 0.2s ease-in-out; 
   }
   
-#textbox input:focus {
+#textbox-container inputbox:focus {
   border-color: #90e0ef;
   box-shadow: 0 0 8px rgba(144, 224, 239, 0.7);
 }
@@ -65,6 +65,10 @@ html, body {
 #button-1 { 
     left: 230px; 
     top: 403px;
+}
+
+#button-1:hover{
+  background-color: #014b73;
 }
 
 #button-2 { 
