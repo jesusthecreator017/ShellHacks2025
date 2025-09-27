@@ -142,6 +142,9 @@ APP_NAME = "path_finder_app"
 USER_ID = "user_1"
 SESSION_ID = "session_001" # Using a fixed ID for simplicity
 
+# >>> ADDED: make runner visible to the whole module
+runner = None  # will be set on FastAPI startup
+
 
 async def main():
     global runner
@@ -227,13 +230,13 @@ async def run_conversation():
        #                                session_id = SESSION_ID) # Expecting the tool's error message
 
     # Execute the conversation using await in an async context (like Colab/Jupyter)
-"""
+
 if __name__ == "__main__":
     try:
         asyncio.run(run_conversation())
     except Exception as e:
         print(f"An error occurred: {e}")
-"""
+
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -249,6 +252,22 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# >>> ADDED: initialize runner on FastAPI startup (so uvicorn has it)
+@app.on_event("startup")
+async def _startup_init_runner():
+    global runner
+    await session_service.create_session(
+        app_name=APP_NAME,
+        user_id=USER_ID,
+        session_id=SESSION_ID
+    )
+    runner = Runner(
+        agent=pathAgent,
+        app_name=APP_NAME,
+        session_service=session_service
+    )
+    print("Runner ready (startup).")
 
 # Define the request body format
 class AskReq(BaseModel):
@@ -275,7 +294,8 @@ async def ask(req: AskReq):
         ):
             if hasattr(event, "is_final_response") and event.is_final_response():
                 content = getattr(event, "content", None)
-                if content and getattr(event, "parts", None):
+                # >>> CHANGED: event -> content
+                if content and getattr(content, "parts", None):
                     final_text = "".join(
                         [getattr(p, "text", "") for p in content.parts if getattr(p, "text", None)]
                     )
@@ -293,5 +313,11 @@ async def ask(req: AskReq):
         return {"text": f"Error: {e}"}
 
 # Start the server if this file is run directly
+#if __name__ == "__main__":
+ #   uvicorn.run(app, host="127.0.0.1", port=8000)
+
 if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    import uvicorn
+    # Don’t use reload=True when starting programmatically.
+    # Reload is meant for the CLI (it forks a reloader process).
+    uvicorn.run("apiServer:app", host="127.0.0.1", port=8080, log_level="info")

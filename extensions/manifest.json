@@ -1,0 +1,19 @@
+{
+  "name": "PathFinder",
+  "description": "Ever get tired from navigating a website? Try out PathFinder",
+  "version": "1.0",
+  "manifest_version": 3,
+
+  "permissions": ["activeTab", "tabs", "scripting"],
+  "host_permissions": [
+    "http://127.0.0.1/*",
+    "http://localhost/*"
+  ],
+
+  "action": { "default_popup": "popup.html", "default_icon": "logo.png" },
+  "background": { "service_worker": "background.js" },
+
+  "content_scripts": [
+    { "matches": ["https://*/*", "http://*/*"], "js": ["content.js"], "run_at": "document_idle" }
+  ]
+}
