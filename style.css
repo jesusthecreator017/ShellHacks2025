@@ -1,3 +1,10 @@
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 400px;
+  height: 550px;
+}
+
 #main-body{
     background-color: #669bbc;
     border-radius: 50px;
@@ -40,36 +47,36 @@
     transition: all 0.2s ease-in-out; 
   }
   
-  #textbox input:focus {
-    border-color: #90e0ef;
-    box-shadow: 0 0 8px rgba(144, 224, 239, 0.7);
-  }
-  
-  .button {
-    position: absolute;
-    bottom: 20px;
-    width: 60px;
-    height: 60px;
-    border-radius: 12px;
-    background-color: #0077b6;
-    color: white;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 20px;
-  }
+#textbox input:focus {
+  border-color: #90e0ef;
+  box-shadow: 0 0 8px rgba(144, 224, 239, 0.7);
+}
 
-    #button-1 { 
-        left: 230px; 
-        top: 415px;
-    }
+.button {
+  position: absolute;
+  bottom: 20px;
+  width: 60px;
+  height: 60px;
+  border-radius: 12px;
+  background-color: #0077b6;
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 20px;
+}
 
-    #button-2 { 
-        left: 180px; 
-        top: 315px;
-    }
+#button-1 { 
+    left: 230px; 
+    top: 415px;
+}
 
-    #button-3 { 
-        left: 255px; 
-        top: 315px;
-    }
+#button-2 { 
+    left: 180px; 
+    top: 315px;
+}
+
+#button-3 { 
+    left: 255px; 
+    top: 315px;
+}
