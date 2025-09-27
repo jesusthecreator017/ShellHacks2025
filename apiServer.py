@@ -34,57 +34,211 @@ modelGemini = "gemini-2.5-flash"
 
 
 # @title Define the Path Finder tool
-def getPrompt(website: str) -> dict:
-    """ Provides a step by step guide on how to navigate through a website.
-    
-    Ar:
-    """
+def getPrompt(website: str, task: str) -> dict:
+    """Provides a step-by-step guide for a given website/task (mock DB with flexible matching)."""
+    print(f"-- Tool: getPrompt called for website={website}, task={task} ---")
 
-def get_weather(city: str) -> dict:
-    """Retrieves the current weather report for a specified city.
+    # Normalize domain
+    w = website.strip().lower()
+    for prefix in ("https://", "http://"):
+        if w.startswith(prefix):
+            w = w[len(prefix):]
+    if w.startswith("www."):
+        w = w[4:]
+    domain = w.split("/")[0]
+    task_norm = task.strip().lower()
 
-    Args:
-        city (str): The name of the city (e.g., "New York", "London", "Tokyo").
+    # Canonicalize common phrasings to a single key
+    def canonical_task(t: str) -> str:
+        t = t.replace("my ", " ")  # "cancel my subscription" -> "cancel subscription"
+        t = " ".join(t.split())    # collapse extra spaces
+        # Map common synonyms to our mock keys
+        if "cancel" in t and ("subscription" in t or "membership" in t or "premium" in t or "plan" in t):
+            return "cancel subscription"
+        return t
 
-    Returns:
-        dict: A dictionary containing the weather information.
-              Includes a 'status' key ('success' or 'error').
-              If 'success', includes a 'report' key with weather details.
-              If 'error', includes an 'error_message' key.
-    """
-    print(f"--- Tool: get_weather called for city: {city} ---") # Log tool execution
-    city_normalized = city.lower().replace(" ", "") # Basic normalization
+    task_key = canonical_task(task_norm)
 
-    # Mock weather data
-    mock_weather_db = {
-        "newyork": {"status": "success", "report": "The weather in New York is sunny with a temperature of 25°C."},
-        "london": {"status": "success", "report": "It's cloudy in London with a temperature of 15°C."},
-        "tokyo": {"status": "success", "report": "Tokyo is experiencing light rain and a temperature of 18°C."},
+    mock_navigation_db = {
+        ("spotify.com", "cancel subscription"): {
+            "status": "success",
+            "steps": [
+                "Go to **Account** from your profile picture.",
+                "Click **Plans** or **Subscriptions**.",
+                "Select **Cancel Premium**.",
+                "Confirm cancellation."
+            ]
+        },
+        ("netflix.com", "cancel subscription"): {
+            "status": "success",
+            "steps": [
+                "Log in and open **Account**.",
+                "Scroll to **Membership & Billing**.",
+                "Click **Cancel Membership**.",
+                "Confirm cancellation."
+            ]
+        }
     }
 
-    if city_normalized in mock_weather_db:
-        return mock_weather_db[city_normalized]
-    else:
-        return {"status": "error", "error_message": f"Sorry, I don't have weather information for '{city}'."}
+    # Exact lookup on canonical key
+    key = (domain, task_key)
+    if key in mock_navigation_db:
+        return mock_navigation_db[key]
 
+    # Fallback: fuzzy contains match on task if same domain
+    for (site, db_task), payload in mock_navigation_db.items():
+        if site == domain and db_task in task_norm:
+            return payload
+
+    return {"status": "error", "error_message": f"No navigation steps found for {domain} / {task}"}
 # Example tool usage (optional test)
-print(get_weather("New York"))
-print(get_weather("Paris"))
+print(getPrompt("spotify.com", "cancel subscription"))
+print(getPrompt("https://www.netflix.com/browse", "cancel subscription"))
 
 # @title Define the Weather Agent
 # Use one of the model constants defined earlier
 agentModel = modelGemini # Starting with Gemini
-
-weather_agent = Agent(
-    name="weather_agent_v1",
-    model=agentModel, # Can be a string for Gemini or a LiteLlm object
-    description="Provides weather information for specific cities.",
-    instruction="You are a helpful weather assistant. "
-                "When the user asks for the weather in a specific city, "
-                "use the 'get_weather' tool to find the information. "
+'''
+pathAgent = Agent(
+    name = "pathAgent_v1",
+    model = agentModel, # Can be a string for Gemini or a LiteLlm object
+    description = "Provides a step by step guide on how to naviage a website",
+    instruction = "You are a helpful nagivation assistant. "
+                "When the user asks for help navigating a website, "
+                "use the 'getPath' tool to find the information. "
                 "If the tool returns an error, inform the user politely. "
                 "If the tool is successful, present the weather report clearly.",
-    tools=[get_weather], # Pass the function directly
+    tools=[getPrompt], # Pass the function directly
+)'''
+
+pathAgent = Agent(
+    name="pathAgent_v1",
+    model=modelGemini,  # keep your model id
+    description="Website navigation assistant (no tools).",
+    instruction=(
+        "You help users complete tasks on websites using general knowledge. "
+        "Given a domain and a task, produce 4–8 concise, numbered steps. "
+        "Bold exact UI labels (buttons/menus/links) like **Billing**, **Cancel subscription**. "
+        "Be specific but site-agnostic; when layouts vary, give a safe fallback (e.g., open **Help**/**Support** and search). "
+        "Output only the steps—no extra commentary."
+    ),
 )
 
-print(f"Agent '{weather_agent.name}' created using model '{agentModel}'.")
+print(f"Agent '{pathAgent.name}' created using model '{agentModel}'.")  
+
+# @title Setup Session Service and Runner
+
+# --- Session Management ---
+# Key Concept: SessionService stores conversation history & state.
+# InMemorySessionService is simple, non-persistent storage for this tutorial.
+session_service = InMemorySessionService()
+
+# Define constants for identifying the interaction context
+APP_NAME = "path_finder_app"
+USER_ID = "user_1"
+SESSION_ID = "session_001" # Using a fixed ID for simplicity
+
+
+async def main():
+    global runner
+    session = await session_service.create_session(
+        app_name = APP_NAME,
+        user_id = USER_ID,
+        session_id = SESSION_ID
+    )
+    print(f"Session created: App='{APP_NAME}', User='{USER_ID}', Session='{SESSION_ID}'")
+
+    runner = Runner(
+        agent = pathAgent,  # <-- use your actual agent variable
+        app_name = APP_NAME,
+        session_service = session_service
+    )
+    print(f"Runner created for agent '{runner.agent.name}'.")
+
+if __name__ == "__main__":
+    asyncio.run(main())
+
+async def call_agent_async(query: str, runner, user_id, session_id):
+  """Sends a query to the agent and prints the final response."""
+  print(f"\n>>> User Query: {query}")
+
+  # Prepare the user's message in ADK format
+  content = types.Content(role = 'user', parts = [types.Part(text = query)])
+
+  final_response_text = "Agent did not produce a final response." # Default
+
+  # Key Concept: run_async executes the agent logic and yields Events.
+  # We iterate through events to find the final answer.
+  async for event in runner.run_async(user_id=user_id, session_id=session_id, new_message=content):
+      # You can uncomment the line below to see *all* events during execution
+      print(f"  [Event] Author: {event.author}, Type: {type(event).__name__}, Final: {event.is_final_response()}, Content: {event.content}")
+
+      # Key Concept: is_final_response() marks the concluding message for the turn.
+      if event.is_final_response():
+          if event.content and event.content.parts:
+             # Assuming text response in the first part
+             final_response_text = event.content.parts[0].text
+          elif event.actions and event.actions.escalate: # Handle potential errors/escalations
+             final_response_text = f"Agent escalated: {event.error_message or 'No specific message.'}"
+          # Add more checks here if needed (e.g., specific error codes)
+          break # Stop processing events once the final response is found
+
+  print(f"<<< Agent Response: {final_response_text}")
+
+# @title Run the Initial Conversation
+
+# We need an async function to await our interaction helper
+async def run_conversation():
+    await call_agent_async(
+        "how do I reset my password on github.com?"
+        "Produce 4–8 numbered steps with **bold** UI labels and a safe fallback.",
+        runner=runner,
+        user_id=USER_ID,
+        session_id=SESSION_ID
+    )
+
+    await call_agent_async(
+        "DOMAIN: netflix.com\nTASK: cancel subscription\n"
+        "Produce 4–8 numbered steps with **bold** UI labels and a safe fallback.",
+        runner=runner,
+        user_id=USER_ID,
+        session_id=SESSION_ID
+    )
+    #await call_agent_async("how do i cancel my subscription in spotify.com?",
+     #                                  runner = runner,
+      #                                 user_id = USER_ID,
+       #                                session_id = SESSION_ID)
+
+    #await call_agent_async("what about netflix.com?",
+     #                                  runner = runner,
+      #                                 user_id = USER_ID,
+       #                                session_id = SESSION_ID) # Expecting the tool's error message
+
+    # Execute the conversation using await in an async context (like Colab/Jupyter)
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(run_conversation())
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+from fastapi import FastAPI
+from pydantic import BaseModel
+import uvicorn
+
+# Create the FastAPI app
+app = FastAPI()
+
+# Define the request body format
+class PromptReq(BaseModel):
+    website: str
+    task: str
+
+# Define the /prompt endpoint
+@app.post("/prompt")
+def prompt(req: PromptReq):
+    return getPrompt(req.website, req.task)  # reuse your existing function
+
+# Start the server if this file is run directly
+if __name__ == "__main__":
+    uvicorn.run(app, host="127.0.0.1", port=8000)

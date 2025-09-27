@@ -6,5 +6,10 @@
   "action": {
     "default_popup": "popup.html",
     "default_icon": "hello_extensions.png"
-  }
+  },
+  "background":{
+    "service_worker": "background.js"
+  },
+  "permissions": ["activeTab", "scripting", "tabs"],
+  "host_permissions": ["https://*/*", "http://*/*"]
 }
