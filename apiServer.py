@@ -34,7 +34,7 @@ else:
     print("Google API Key set: No")
 
 #name the model
-modelGemini = "gemini-2.0-flash"
+modelGemini = "gemini-2.0-pro"
 
 
 # @title Define the Path Finder tool
