@@ -1,10 +1,8 @@
-// background.js
 const API_BASE = "http://127.0.0.1:8080";
 const API_ASK = `${API_BASE}/ask`;
 const API_HEALTH = `${API_BASE}/health`;
 
 console.log("[PF] background loaded");
-console.log("[PF] AI response text:", data?.text);
 chrome.runtime.onInstalled.addListener(() => console.log("[PF] installed"));
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
@@ -35,6 +33,10 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
           const responseText = data?.text || "";
           console.log("[PF] /ask payload:", responseText);
 
+          if (!responseText) {
+            console.warn("[PF] Empty response text received from /ask.");
+          }
+
           // --- NEW LOGIC: Extract bolded text for highlighting ---
           const matches = responseText.match(/\*\*(.*?)\*\*/g); // Finds all text between **
           if (matches && matches.length > 0) {
@@ -43,11 +45,13 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 
             // Forward the first extracted UI label to the active tab
             chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
-              if (tabs[0]?.id) {
+              if (tabs.length > 0 && tabs[0]?.id) {
                 chrome.tabs.sendMessage(tabs[0].id, {
                   action: "highlight",
                   text: firstHighlight
                 });
+              } else {
+                console.error("[PF] No active tab found to send the message.");
               }
             });
           }
