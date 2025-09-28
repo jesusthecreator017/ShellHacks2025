@@ -1,3 +1,4 @@
+// content.js
 console.log("PathFinder content script loaded on", window.location.href);
 
 // Add highlight CSS class
@@ -31,25 +32,26 @@ function highlightClickableElements(keyword) {
   let found = false;
 
   clickables.forEach(el => {
+    // Get text from various possible attributes and inner text
     const text = (el.innerText || el.value || el.getAttribute("aria-label") || "").toLowerCase();
+
+    // Check if the element's text includes the keyword
     if (text.includes(keyword.toLowerCase())) {
       console.log("✅ Highlighting element:", el, "with text:", text);
       el.classList.add("ai-highlight");
-      // fallback visual effect for testing
-      el.style.outline = "3px solid gold";
-      el.style.backgroundColor = "rgba(255,255,0,0.3)";
       found = true;
     }
   });
 
   if (!found) {
-    console.log("❌ No clickable elements matched:", keyword);
+    console.log("❌ No clickable elements matched for:", keyword);
   }
 }
 
 // Listen for messages from background.js
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "highlight") {
+    // The message.text will now be the specific UI label like "Account"
     highlightClickableElements(request.text);
   }
 });

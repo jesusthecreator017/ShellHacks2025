@@ -27,20 +27,29 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       if (!r.ok) return sendResponse({ ok: false, error: `Server ${r.status}` });
 
       const data = await r.json();
-      console.log("[PF] /ask payload:", data);
+      const responseText = data?.text || "";
+      console.log("[PF] /ask payload:", responseText);
 
-      // Forward the AI’s output to the active tab for highlighting
-      chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
-        if (tabs[0]?.id) {
-          chrome.tabs.sendMessage(tabs[0].id, {
-            action: "highlight",
-            text: data?.text || ""
-          });
-        }
-      });
+      // --- NEW LOGIC: Extract bolded text for highlighting ---
+      const matches = responseText.match(/\*\*(.*?)\*\*/g); // Finds all text between **
+      if (matches && matches.length > 0) {
+        const cleanedMatches = matches.map(m => m.replace(/\*\*/g, "").trim());
+        const firstHighlight = cleanedMatches[0];
 
-      // Also reply to the original sender (popup)
-      sendResponse({ ok: true, text: data?.text || "" });
+        // Forward the first extracted UI label to the active tab
+        chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
+          if (tabs[0]?.id) {
+            chrome.tabs.sendMessage(tabs[0].id, {
+              action: "highlight",
+              text: firstHighlight
+            });
+          }
+        });
+      }
+
+      // Also reply to the original sender (popup) with the full response
+      sendResponse({ ok: true, text: responseText });
+
     } catch (e) {
       console.error("[PF] fetch error:", e);
       sendResponse({ ok: false, error: String(e) });
@@ -49,5 +58,3 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 
   return true; // keep the message channel open
 });
-
-console.log("[PF] AI response text:", data?.text);
