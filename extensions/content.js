@@ -62,7 +62,7 @@ function startAutoReveal() {
 	const reveal = () => {
 		if (currentStep < steps.length) {
 			showNextStep();
-			setTimeout(reveal, 1000); // next step after 1s
+			setTimeout(reveal, .1); // next step after 1s
 		}
 	};
 	reveal();
