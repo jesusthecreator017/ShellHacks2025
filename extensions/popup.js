@@ -6,7 +6,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("search-form");
   const input = document.getElementById("inputbox");
   const messages = document.getElementById("messages");
-  const arrowBtn = document.getElementById("button-1"); // the blue arrow
+  const messagesBox = document.getElementById("messages-box");
+  const arrowBtn = document.getElementById("button-1");
+  const historyBtn = document.getElementById("button-3");
 
   // (keep your existing functions as-is)
   async function getActiveHostname() {
@@ -48,6 +50,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!hostname) return renderText("Open a normal page and try again.");
     if (!task)     return renderText("Please enter what you want to do.");
 
+    input.value = "";
+
     const query = buildQuery(hostname, task);
 
     // 🔹 Send to background (do NOT fetch here)
@@ -75,4 +79,158 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Focus for convenience
   input.focus();
+
+  let searchHistory = [];
+  let historyVisible = false;
+
+  const historyContainer = document.createElement("div");
+  historyContainer.id = "historyContainer";
+  historyContainer.style.display = "block";
+  historyContainer.style.width = "250px";
+  historyContainer.style.height = "275px";
+  historyContainer.style.backgroundColor = "#778da9";
+  historyContainer.style.marginLeft = "25px";
+  historyContainer.style.borderRadius = "15px";
+  historyContainer.style.overflowX = "hidden";
+  historyContainer.style.overflowY = "auto";
+  historyContainer.style.padding = "15px";
+  historyContainer.style.boxSizing = "border-box";
+
+  function renderHistory(){
+    historyContainer.innerHTML = "";
+
+    if(searchHistory.length === 0){
+      const empty = document.createElement("p");
+      empty.textContent = "This is an empty history"
+      empty.style.color = "white";
+      historyContainer.appendChild(empty);
+      if(messagesBox){
+        messagesBox.style.display = "none";
+        messagesBox.before(historyContainer);
+      } else {
+        console.warn("Failed to get message box");
+      }
+      return;
+    }
+
+    searchHistory.forEach((item) => {
+      const historyItem = document.createElement("div");
+      historyItem.textContent = item;
+      historyItem.style.padding = "8px";
+			historyItem.style.margin = "4px 0";
+			historyItem.style.cursor = "pointer";
+			historyItem.style.borderRadius = "4px";
+			historyItem.style.backgroundColor = "#FFFFFF";
+			historyItem.style.border = "1px solid #333";
+
+      // Hover effects
+			historyItem.addEventListener("mouseenter", () => {
+				historyItem.style.backgroundColor = "#333";
+			});
+			historyItem.addEventListener("mouseleave", () => {
+				historyItem.style.backgroundColor = "#1a1a1a";
+			});
+
+      // Click to use history item
+			historyItem.addEventListener("click", () => {
+				input.value = item;
+				toggleHistory(); // Close history
+				form.requestSubmit(); // Auto-submit
+			});
+
+      historyContainer.appendChild(historyItem);
+    });
+  }
+
+  function toggleHistory(){
+    historyVisible = !historyVisible;
+    if(historyVisible){
+      renderHistory();
+      historyContainer.style.display = "block";
+    } else {
+      historyContainer.style.display = "none";
+      messagesBox.style.display = "block";
+    }
+  }
+  
+  function saveHistory() {
+		try {
+			// Try chrome storage first
+			if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+				chrome.storage.local.set({ searchHistory: searchHistory });
+			} else {
+				// Fallback to localStorage for Arc browser
+				localStorage.setItem('searchHistory', JSON.stringify(searchHistory));
+			}
+		} catch (error) {
+			console.warn("Could not save history:", error);
+		}
+	}
+
+  function loadHistory() {
+		try {
+			// Try chrome storage first
+			if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+				chrome.storage.local.get(["searchHistory"], (result) => {
+					if (chrome.runtime.lastError) {
+						console.warn("Could not load from chrome storage, trying localStorage");
+						loadFromLocalStorage();
+						return;
+					}
+					if (result.searchHistory && Array.isArray(result.searchHistory)) {
+						searchHistory = result.searchHistory;
+					}
+				});
+			} else {
+				// Fallback to localStorage for Arc browser
+				loadFromLocalStorage();
+			}
+		} catch (error) {
+			console.warn("Could not load history:", error);
+			loadFromLocalStorage();
+		}
+	}
+
+  function loadFromLocalStorage() {
+		try {
+			const saved = localStorage.getItem('searchHistory');
+			if (saved) {
+				const parsed = JSON.parse(saved);
+				if (Array.isArray(parsed)) {
+					searchHistory = parsed;
+				}
+			}
+		} catch (error) {
+			console.warn("Could not load from localStorage:", error);
+		}
+	}
+
+    function addToHistory(task){
+    if (!task || !task.trim()) return;
+		
+		// Don't add duplicate consecutive entries
+		if (searchHistory[0] === task) return;
+		
+		// Add to beginning of array
+		searchHistory.unshift(task);
+		
+		// Keep only last 10 items
+		if (searchHistory.length > 10) {
+			searchHistory = searchHistory.slice(0, 10);
+		}
+		
+		// Save to chrome storage
+		// Save to chrome storage with error handling
+		// Save to chrome storage
+		saveHistory();
+  }
+
+  loadHistory();
+
+  historyBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();  
+    toggleHistory();
+  });
+
 }); // <-- end DOMContentLoaded
