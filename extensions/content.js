@@ -1,11 +1,14 @@
-// content.js
-console.log("PathFinder content script loaded on", window.location.href);
+console.log("[PF] content.js loaded");
 
-// Add highlight CSS class
+let steps = [];
+let currentStep = 0;
+let revealMode = "auto"; // "auto" = timed, "manual" = click to advance
+
+// Inject CSS once
 const style = document.createElement("style");
 style.textContent = `
   .ai-highlight {
-    outline: 3px solid #FFD700 !important; /* gold glow */
+    outline: 3px solid #FFD700 !important;
     background-color: rgba(255, 255, 0, 0.3) !important;
     border-radius: 6px;
     transition: 0.3s ease;
@@ -13,45 +16,68 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-function highlightClickableElements(keyword) {
-  if (!keyword) return;
-
-  // Remove old highlights first
+function clearHighlights() {
   document.querySelectorAll(".ai-highlight").forEach(el => {
     el.classList.remove("ai-highlight");
-    el.style.outline = "";
-    el.style.backgroundColor = "";
   });
+}
 
-  // Broad selector for clickable elements
+function highlightStep(label) {
+  clearHighlights();
+  if (!label) return;
+
   const clickables = document.querySelectorAll(
     "button, a, input[type=button], input[type=submit], " +
     "div[role=button], span[role=button], div[onclick], span[onclick]"
   );
 
   let found = false;
-
   clickables.forEach(el => {
-    // Get text from various possible attributes and inner text
     const text = (el.innerText || el.value || el.getAttribute("aria-label") || "").toLowerCase();
-
-    // Check if the element's text includes the keyword
-    if (text.includes(keyword.toLowerCase())) {
-      console.log("✅ Highlighting element:", el, "with text:", text);
+    if (text.includes(label.toLowerCase())) {
       el.classList.add("ai-highlight");
       found = true;
     }
   });
 
-  if (!found) {
-    console.log("❌ No clickable elements matched for:", keyword);
+  console.log(found ? `✅ Highlighted: ${label}` : `❌ Not found: ${label}`);
+}
+
+function showNextStep() {
+  if (currentStep < steps.length) {
+    highlightStep(steps[currentStep]);
+    currentStep++;
+  } else {
+    console.log("[PF] All steps shown.");
   }
 }
 
-// Listen for messages from background.js
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === "highlight") {
-    // The message.text will now be the specific UI label like "Account"
-    highlightClickableElements(request.text);
+function startAutoReveal() {
+  currentStep = 0;
+  const reveal = () => {
+    if (currentStep < steps.length) {
+      showNextStep();
+      setTimeout(reveal, 1000); // next step after 1s
+    }
+  };
+  reveal();
+}
+
+// Listen for new steps from background.js
+chrome.runtime.onMessage.addListener((msg) => {
+  if (msg.action === "highlight-steps") {
+    steps = msg.steps;
+    currentStep = 0;
+
+    if (revealMode === "auto") {
+      startAutoReveal();
+    } else {
+      showNextStep(); // manual: show first step, wait for click
+    }
   }
+});
+
+// If manual mode → advance on click
+document.addEventListener("click", () => {
+  if (revealMode === "manual") showNextStep();
 });

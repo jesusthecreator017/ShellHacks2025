@@ -8,81 +8,47 @@ chrome.runtime.onInstalled.addListener(() => console.log("[PF] installed"));
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg?.type !== "ASK") return;
 
-  console.log("[PF] received ASK:", msg.query);
-
   (async () => {
-    let response = { ok: false, text: "", error: "An unexpected error occurred." };
+    let response = { ok: false, text: "", error: "Unexpected error." };
 
     try {
       const h = await fetch(API_HEALTH);
-      console.log("[PF] /health status:", h.status);
-      if (!h.ok) {
-        response.error = `/health ${h.status}`;
-      } else {
-        const r = await fetch(API_ASK, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ query: msg.query })
+      if (!h.ok) throw new Error(`/health ${h.status}`);
+
+      const r = await fetch(API_ASK, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: msg.query })
+      });
+
+      if (!r.ok) throw new Error(`Server ${r.status}`);
+
+      const data = await r.json();
+      const responseText = data?.text || "";
+
+      const matches = responseText.match(/\*\*(.*?)\*\*/g);
+      if (matches?.length) {
+        const cleaned = matches.map(m => m.replace(/\*\*/g, "").trim());
+
+        // Send the full list to content.js
+        chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
+          if (tabs[0]?.id) {
+            chrome.tabs.sendMessage(tabs[0].id, {
+              action: "highlight-steps",
+              steps: cleaned
+            });
+          }
         });
-        console.log("[PF] /ask status:", r.status);
-
-        if (!r.ok) {
-          response.error = `Server ${r.status}`;
-        } else {
-          const data = await r.json();
-          const responseText = data?.text || "";
-          console.log("[PF] /ask payload:", responseText);
-
-          if (!responseText) {
-            console.warn("[PF] Empty response text received from /ask.");
-          }
-
-          // --- EDITED LOGIC: Extract and highlight all bolded text sequentially ---
-          const matches = responseText.match(/\*\*(.*?)\*\*/g); // Finds all text between **
-          if (matches && matches.length > 0) {
-            const cleanedMatches = matches.map(m => m.replace(/\*\*/g, "").trim());
-
-            // Recursive function to send highlights with a delay
-            const highlightNextStep = (index) => {
-              if (index >= cleanedMatches.length) {
-                console.log("[PF] All steps have been sent for highlighting.");
-                return;
-              }
-
-              const highlightText = cleanedMatches[index];
-
-              // Forward the extracted UI label to the active tab
-              chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
-                if (tabs.length > 0 && tabs[0]?.id) {
-                  chrome.tabs.sendMessage(tabs[0].id, {
-                    action: "highlight",
-                    text: highlightText
-                  });
-
-                  // Set a delay before sending the next step
-                  setTimeout(() => {
-                    highlightNextStep(index + 1);
-                  }, 5000); // 5-second delay
-                } else {
-                  console.error("[PF] No active tab found to send the message.");
-                }
-              });
-            };
-
-            // Start the highlighting process
-            highlightNextStep(0);
-          }
-          response = { ok: true, text: responseText };
-        }
       }
+
+      response = { ok: true, text: responseText };
     } catch (e) {
-      console.error("[PF] fetch error:", e);
+      console.error("[PF] error:", e);
       response.error = String(e);
     } finally {
-      // Call sendResponse only once at the end
       sendResponse(response);
     }
   })();
 
-  return true; // Keep the message channel open for the asynchronous response
+  return true; // keep channel open
 });
