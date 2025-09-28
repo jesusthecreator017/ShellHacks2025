@@ -5,7 +5,30 @@ const API_HEALTH = `${API_BASE}/health`;
 console.log("[PF] background loaded");
 chrome.runtime.onInstalled.addListener(() => console.log("[PF] installed"));
 
-chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+// Listen for tab updates (when a page reloads or navigates)
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  // Only proceed if the page has fully loaded
+  if (changeInfo.status === 'complete' && tab.url.startsWith('http')) {
+    chrome.storage.local.get(['pathfinderSteps'], (result) => {
+      const steps = result.pathfinderSteps;
+      if (steps && steps.length > 0) {
+        console.log("[PF] Found steps in storage, sending the next one.");
+        
+        // Send the next highlight message to the new page
+        chrome.tabs.sendMessage(tabId, {
+          action: "highlight",
+          text: steps[0]
+        });
+        
+        // Remove the step that was just sent
+        const remainingSteps = steps.slice(1);
+        chrome.storage.local.set({ pathfinderSteps: remainingSteps });
+      }
+    });
+  }
+});
+
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg?.type !== "ASK") return;
 
   console.log("[PF] received ASK:", msg.query);
@@ -37,40 +60,24 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
             console.warn("[PF] Empty response text received from /ask.");
           }
 
-          // --- EDITED LOGIC: Extract and highlight all bolded text sequentially ---
-          const matches = responseText.match(/\*\*(.*?)\*\*/g); // Finds all text between **
+          const matches = responseText.match(/\*\*(.*?)\*\*/g);
           if (matches && matches.length > 0) {
             const cleanedMatches = matches.map(m => m.replace(/\*\*/g, "").trim());
 
-            // Recursive function to send highlights with a delay
-            const highlightNextStep = (index) => {
-              if (index >= cleanedMatches.length) {
-                console.log("[PF] All steps have been sent for highlighting.");
-                return;
-              }
-
-              const highlightText = cleanedMatches[index];
-
-              // Forward the extracted UI label to the active tab
-              chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
-                if (tabs.length > 0 && tabs[0]?.id) {
-                  chrome.tabs.sendMessage(tabs[0].id, {
-                    action: "highlight",
-                    text: highlightText
-                  });
-
-                  // Set a delay before sending the next step
-                  setTimeout(() => {
-                    highlightNextStep(index + 1);
-                  }, 5000); // 5-second delay
-                } else {
-                  console.error("[PF] No active tab found to send the message.");
-                }
+            // Save all steps to storage
+            chrome.storage.local.set({ pathfinderSteps: cleanedMatches }, () => {
+              console.log("[PF] Steps saved to storage:", cleanedMatches);
+              
+              // Send the first highlight immediately
+              chrome.tabs.sendMessage(sender.tab.id, {
+                action: "highlight",
+                text: cleanedMatches[0]
               });
-            };
-
-            // Start the highlighting process
-            highlightNextStep(0);
+              
+              // Remove the first step from the stored array
+              const remainingSteps = cleanedMatches.slice(1);
+              chrome.storage.local.set({ pathfinderSteps: remainingSteps });
+            });
           }
           response = { ok: true, text: responseText };
         }
@@ -79,10 +86,9 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       console.error("[PF] fetch error:", e);
       response.error = String(e);
     } finally {
-      // Call sendResponse only once at the end
       sendResponse(response);
     }
   })();
 
-  return true; // Keep the message channel open for the asynchronous response
+  return true;
 });
