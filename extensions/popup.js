@@ -50,6 +50,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!hostname) return renderText("Open a normal page and try again.");
     if (!task)     return renderText("Please enter what you want to do.");
 
+    addToHistory(task);
+
     input.value = "";
 
     const query = buildQuery(hostname, task);
@@ -85,7 +87,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const historyContainer = document.createElement("div");
   historyContainer.id = "historyContainer";
-  historyContainer.style.display = "block";
+  historyContainer.style.display = "none";
   historyContainer.style.width = "250px";
   historyContainer.style.height = "275px";
   historyContainer.style.backgroundColor = "#778da9";
@@ -96,6 +98,12 @@ document.addEventListener("DOMContentLoaded", () => {
   historyContainer.style.padding = "15px";
   historyContainer.style.boxSizing = "border-box";
 
+  if (messagesBox) {
+    messagesBox.before(historyContainer);
+  } else {
+    console.warn("Failed to get message box");
+  }
+
   function renderHistory(){
     historyContainer.innerHTML = "";
 
@@ -104,12 +112,6 @@ document.addEventListener("DOMContentLoaded", () => {
       empty.textContent = "This is an empty history"
       empty.style.color = "white";
       historyContainer.appendChild(empty);
-      if(messagesBox){
-        messagesBox.style.display = "none";
-        messagesBox.before(historyContainer);
-      } else {
-        console.warn("Failed to get message box");
-      }
       return;
     }
 
@@ -125,10 +127,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Hover effects
 			historyItem.addEventListener("mouseenter", () => {
-				historyItem.style.backgroundColor = "#333";
+				historyItem.style.backgroundColor = "#c9c9c9";
 			});
 			historyItem.addEventListener("mouseleave", () => {
-				historyItem.style.backgroundColor = "#1a1a1a";
+				historyItem.style.backgroundColor = "#FFFFFF";
 			});
 
       // Click to use history item
@@ -146,6 +148,7 @@ document.addEventListener("DOMContentLoaded", () => {
     historyVisible = !historyVisible;
     if(historyVisible){
       renderHistory();
+      messagesBox.style.display = "none";
       historyContainer.style.display = "block";
     } else {
       historyContainer.style.display = "none";
@@ -205,7 +208,7 @@ document.addEventListener("DOMContentLoaded", () => {
 		}
 	}
 
-    function addToHistory(task){
+  function addToHistory(task){
     if (!task || !task.trim()) return;
 		
 		// Don't add duplicate consecutive entries
