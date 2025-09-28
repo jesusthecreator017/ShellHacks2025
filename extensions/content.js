@@ -1,6 +1,7 @@
 
 console.log("PathFinder content script loaded on", window.location.href);
 
+// 🔹 Inject highlight CSS
 const style = document.createElement("style");
 style.textContent = `
   .ai-highlight {
@@ -12,6 +13,7 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
+// 🔹 Core highlight function
 function highlightClickableElements(keyword) {
   if (!keyword) return;
 
@@ -34,9 +36,9 @@ function highlightClickableElements(keyword) {
       el.getAttribute("aria-label") ||
       ""
     ).toLowerCase();
-  
+
     console.log("Checking element:", el, "with text:", text);
-  
+
     if (text.includes(keyword.toLowerCase())) {
       console.log("✅ Highlighting element:", el, "with text:", text);
       el.classList.add("ai-highlight");
@@ -49,24 +51,45 @@ function highlightClickableElements(keyword) {
   }
 }
 
-// Listen for background.js messages
+// 🔹 Extract bolded keywords from AI response
+function extractKeywordsFromAI(text) {
+  const regex = /\*\*(.*?)\*\*/g;
+  const matches = [];
+  let match;
+  while ((match = regex.exec(text)) !== null) {
+    matches.push(match[1]);
+  }
+  return matches;
+}
+
+// 🔹 Highlight all keywords from AI response
+function highlightAIResponse(text) {
+  const keywords = extractKeywordsFromAI(text);
+  if (keywords.length === 0) {
+    console.log("⚠️ No bolded keywords found in AI response.");
+  }
+  keywords.forEach(k => highlightClickableElements(k));
+}
+
+// 🔹 Listen for messages from background.js
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "highlight") {
-    highlightClickableElements(request.text);
+    highlightAIResponse(request.text);
   }
 });
 
-let lastKeyword = ""; // Store the last keyword for re-highlighting
+// 🔹 Support dynamic content changes
+let lastResponseText = "";
 
 const observer = new MutationObserver(() => {
-  if (lastKeyword) {
-    highlightClickableElements(lastKeyword);
+  if (lastResponseText) {
+    highlightAIResponse(lastResponseText);
   }
 });
 
 observer.observe(document.body, { childList: true, subtree: true });
 
+// Keep last response for re-highlighting
 function highlightClickableElements(keyword) {
-  lastKeyword = keyword; // Update the last keyword
-  // Existing logic...
+  lastResponseText = keyword;
 }
