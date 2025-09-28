@@ -1,4 +1,4 @@
-// background.js
+// Corrected background.js
 const API_BASE = "http://127.0.0.1:8080";
 const API_ASK = `${API_BASE}/ask`;
 const API_HEALTH = `${API_BASE}/health`;
@@ -12,49 +12,55 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   console.log("[PF] received ASK:", msg.query);
 
   (async () => {
+    let response = { ok: false, text: "", error: "An unexpected error occurred." };
+
     try {
       const h = await fetch(API_HEALTH);
       console.log("[PF] /health status:", h.status);
-      if (!h.ok) return sendResponse({ ok: false, error: `/health ${h.status}` });
+      if (!h.ok) {
+        response.error = `/health ${h.status}`;
+      } else {
+        const r = await fetch(API_ASK, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query: msg.query })
+        });
+        console.log("[PF] /ask status:", r.status);
 
-      const r = await fetch(API_ASK, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: msg.query })
-      });
-      console.log("[PF] /ask status:", r.status);
+        if (!r.ok) {
+          response.error = `Server ${r.status}`;
+        } else {
+          const data = await r.json();
+          const responseText = data?.text || "";
+          console.log("[PF] /ask payload:", responseText);
 
-      if (!r.ok) return sendResponse({ ok: false, error: `Server ${r.status}` });
+          // --- NEW LOGIC: Extract bolded text for highlighting ---
+          const matches = responseText.match(/\*\*(.*?)\*\*/g); // Finds all text between **
+          if (matches && matches.length > 0) {
+            const cleanedMatches = matches.map(m => m.replace(/\*\*/g, "").trim());
+            const firstHighlight = cleanedMatches[0];
 
-      const data = await r.json();
-      const responseText = data?.text || "";
-      console.log("[PF] /ask payload:", responseText);
-
-      // --- NEW LOGIC: Extract bolded text for highlighting ---
-      const matches = responseText.match(/\*\*(.*?)\*\*/g); // Finds all text between **
-      if (matches && matches.length > 0) {
-        const cleanedMatches = matches.map(m => m.replace(/\*\*/g, "").trim());
-        const firstHighlight = cleanedMatches[0];
-
-        // Forward the first extracted UI label to the active tab
-        chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
-          if (tabs[0]?.id) {
-            chrome.tabs.sendMessage(tabs[0].id, {
-              action: "highlight",
-              text: firstHighlight
+            // Forward the first extracted UI label to the active tab
+            chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
+              if (tabs[0]?.id) {
+                chrome.tabs.sendMessage(tabs[0].id, {
+                  action: "highlight",
+                  text: firstHighlight
+                });
+              }
             });
           }
-        });
+          response = { ok: true, text: responseText };
+        }
       }
-
-      // Also reply to the original sender (popup) with the full response
-      sendResponse({ ok: true, text: responseText });
-
     } catch (e) {
       console.error("[PF] fetch error:", e);
-      sendResponse({ ok: false, error: String(e) });
+      response.error = String(e);
+    } finally {
+      // Call sendResponse only once at the end
+      sendResponse(response);
     }
   })();
 
-  return true; // keep the message channel open
+  return true; // Keep the message channel open for the asynchronous response
 });
