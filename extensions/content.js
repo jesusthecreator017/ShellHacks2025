@@ -1,11 +1,10 @@
-
 console.log("PathFinder content script loaded on", window.location.href);
 
 // 🔹 Inject highlight CSS
 const style = document.createElement("style");
 style.textContent = `
   .ai-highlight {
-    outline: 3px solid #FFD700 !important; /* gold glow */
+    outline: 3px solid #FFD700 !important;
     background-color: rgba(255, 255, 0, 0.3) !important;
     border-radius: 6px;
     transition: 0.3s ease;
@@ -13,7 +12,10 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-// 🔹 Core highlight function
+// 🔹 Store last AI response for dynamic updates
+let lastResponseText = "";
+
+// 🔹 Highlight single keyword
 function highlightClickableElements(keyword) {
   if (!keyword) return;
 
@@ -22,7 +24,6 @@ function highlightClickableElements(keyword) {
     el.classList.remove("ai-highlight");
   });
 
-  // Collect clickable elements
   const clickables = document.querySelectorAll(
     "button, a, input[type=button], input[type=submit]"
   );
@@ -37,10 +38,7 @@ function highlightClickableElements(keyword) {
       ""
     ).toLowerCase();
 
-    console.log("Checking element:", el, "with text:", text);
-
     if (text.includes(keyword.toLowerCase())) {
-      console.log("✅ Highlighting element:", el, "with text:", text);
       el.classList.add("ai-highlight");
       found = true;
     }
@@ -62,25 +60,25 @@ function extractKeywordsFromAI(text) {
   return matches;
 }
 
-// 🔹 Highlight all keywords from AI response
+// 🔹 Highlight all bolded keywords in AI response
 function highlightAIResponse(text) {
+  lastResponseText = text; // store for mutation observer
   const keywords = extractKeywordsFromAI(text);
   if (keywords.length === 0) {
     console.log("⚠️ No bolded keywords found in AI response.");
+    return;
   }
   keywords.forEach(k => highlightClickableElements(k));
 }
 
 // 🔹 Listen for messages from background.js
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
   if (request.action === "highlight") {
     highlightAIResponse(request.text);
   }
 });
 
-// 🔹 Support dynamic content changes
-let lastResponseText = "";
-
+// 🔹 Watch DOM changes and re-apply highlights
 const observer = new MutationObserver(() => {
   if (lastResponseText) {
     highlightAIResponse(lastResponseText);
@@ -89,7 +87,3 @@ const observer = new MutationObserver(() => {
 
 observer.observe(document.body, { childList: true, subtree: true });
 
-// Keep last response for re-highlighting
-function highlightClickableElements(keyword) {
-  lastResponseText = keyword;
-}
