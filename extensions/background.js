@@ -4,6 +4,7 @@ const API_ASK = `${API_BASE}/ask`;
 const API_HEALTH = `${API_BASE}/health`;
 
 console.log("[PF] background loaded");
+console.log("[PF] AI response text:", data?.text);
 chrome.runtime.onInstalled.addListener(() => console.log("[PF] installed"));
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
