@@ -1,10 +1,10 @@
 console.log("PathFinder content script loaded on", window.location.href);
 
-// 🔹 Inject highlight CSS
+// Add highlight CSS class
 const style = document.createElement("style");
 style.textContent = `
   .ai-highlight {
-    outline: 3px solid #FFD700 !important;
+    outline: 3px solid #FFD700 !important; /* gold glow */
     background-color: rgba(255, 255, 0, 0.3) !important;
     border-radius: 6px;
     transition: 0.3s ease;
@@ -12,34 +12,32 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-// 🔹 Store last AI response for dynamic updates
-let lastResponseText = "";
-
-// 🔹 Highlight single keyword
 function highlightClickableElements(keyword) {
   if (!keyword) return;
 
   // Remove old highlights first
   document.querySelectorAll(".ai-highlight").forEach(el => {
     el.classList.remove("ai-highlight");
+    el.style.outline = "";
+    el.style.backgroundColor = "";
   });
 
+  // Broad selector for clickable elements
   const clickables = document.querySelectorAll(
-    "button, a, input[type=button], input[type=submit]"
+    "button, a, input[type=button], input[type=submit], " +
+    "div[role=button], span[role=button], div[onclick], span[onclick]"
   );
 
   let found = false;
 
   clickables.forEach(el => {
-    const text = (
-      el.innerText ||
-      el.value ||
-      el.getAttribute("aria-label") ||
-      ""
-    ).toLowerCase();
-
+    const text = (el.innerText || el.value || el.getAttribute("aria-label") || "").toLowerCase();
     if (text.includes(keyword.toLowerCase())) {
+      console.log("✅ Highlighting element:", el, "with text:", text);
       el.classList.add("ai-highlight");
+      // fallback visual effect for testing
+      el.style.outline = "3px solid gold";
+      el.style.backgroundColor = "rgba(255,255,0,0.3)";
       found = true;
     }
   });
@@ -49,41 +47,9 @@ function highlightClickableElements(keyword) {
   }
 }
 
-// 🔹 Extract bolded keywords from AI response
-function extractKeywordsFromAI(text) {
-  const regex = /\*\*(.*?)\*\*/g;
-  const matches = [];
-  let match;
-  while ((match = regex.exec(text)) !== null) {
-    matches.push(match[1]);
-  }
-  return matches;
-}
-
-// 🔹 Highlight all bolded keywords in AI response
-function highlightAIResponse(text) {
-  lastResponseText = text; // store for mutation observer
-  const keywords = extractKeywordsFromAI(text);
-  if (keywords.length === 0) {
-    console.log("⚠️ No bolded keywords found in AI response.");
-    return;
-  }
-  keywords.forEach(k => highlightClickableElements(k));
-}
-
-// 🔹 Listen for messages from background.js
-chrome.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
+// Listen for messages from background.js
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "highlight") {
-    highlightAIResponse(request.text);
+    highlightClickableElements(request.text);
   }
 });
-
-// 🔹 Watch DOM changes and re-apply highlights
-const observer = new MutationObserver(() => {
-  if (lastResponseText) {
-    highlightAIResponse(lastResponseText);
-  }
-});
-
-observer.observe(document.body, { childList: true, subtree: true });
-
