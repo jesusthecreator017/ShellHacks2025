@@ -37,23 +37,40 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
             console.warn("[PF] Empty response text received from /ask.");
           }
 
-          // --- NEW LOGIC: Extract bolded text for highlighting ---
+          // --- EDITED LOGIC: Extract and highlight all bolded text sequentially ---
           const matches = responseText.match(/\*\*(.*?)\*\*/g); // Finds all text between **
           if (matches && matches.length > 0) {
             const cleanedMatches = matches.map(m => m.replace(/\*\*/g, "").trim());
-            const firstHighlight = cleanedMatches[0];
 
-            // Forward the first extracted UI label to the active tab
-            chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
-              if (tabs.length > 0 && tabs[0]?.id) {
-                chrome.tabs.sendMessage(tabs[0].id, {
-                  action: "highlight",
-                  text: firstHighlight
-                });
-              } else {
-                console.error("[PF] No active tab found to send the message.");
+            // Recursive function to send highlights with a delay
+            const highlightNextStep = (index) => {
+              if (index >= cleanedMatches.length) {
+                console.log("[PF] All steps have been sent for highlighting.");
+                return;
               }
-            });
+
+              const highlightText = cleanedMatches[index];
+
+              // Forward the extracted UI label to the active tab
+              chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
+                if (tabs.length > 0 && tabs[0]?.id) {
+                  chrome.tabs.sendMessage(tabs[0].id, {
+                    action: "highlight",
+                    text: highlightText
+                  });
+
+                  // Set a delay before sending the next step
+                  setTimeout(() => {
+                    highlightNextStep(index + 1);
+                  }, 5000); // 5-second delay
+                } else {
+                  console.error("[PF] No active tab found to send the message.");
+                }
+              });
+            };
+
+            // Start the highlighting process
+            highlightNextStep(0);
           }
           response = { ok: true, text: responseText };
         }
