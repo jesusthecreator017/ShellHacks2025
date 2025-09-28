@@ -1,4 +1,4 @@
-// Corrected background.js
+// background.js
 const API_BASE = "http://127.0.0.1:8080";
 const API_ASK = `${API_BASE}/ask`;
 const API_HEALTH = `${API_BASE}/health`;
