@@ -28,6 +28,18 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 
       const data = await r.json();
       console.log("[PF] /ask payload:", data);
+
+      // Forward the AI’s output to the active tab for highlighting
+      chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
+        if (tabs[0]?.id) {
+          chrome.tabs.sendMessage(tabs[0].id, {
+            action: "highlight",
+            text: data?.text || ""
+          });
+        }
+      });
+
+      // Also reply to the original sender (popup)
       sendResponse({ ok: true, text: data?.text || "" });
     } catch (e) {
       console.error("[PF] fetch error:", e);
@@ -35,5 +47,5 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     }
   })();
 
-  return true; // keep the channel open
+  return true; // keep the message channel open
 });
