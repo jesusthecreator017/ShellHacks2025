@@ -34,7 +34,9 @@ function highlightClickableElements(keyword) {
       el.getAttribute("aria-label") ||
       ""
     ).toLowerCase();
-
+  
+    console.log("Checking element:", el, "with text:", text);
+  
     if (text.includes(keyword.toLowerCase())) {
       console.log("✅ Highlighting element:", el, "with text:", text);
       el.classList.add("ai-highlight");
@@ -53,3 +55,18 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     highlightClickableElements(request.text);
   }
 });
+
+let lastKeyword = ""; // Store the last keyword for re-highlighting
+
+const observer = new MutationObserver(() => {
+  if (lastKeyword) {
+    highlightClickableElements(lastKeyword);
+  }
+});
+
+observer.observe(document.body, { childList: true, subtree: true });
+
+function highlightClickableElements(keyword) {
+  lastKeyword = keyword; // Update the last keyword
+  // Existing logic...
+}

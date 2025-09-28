@@ -49,3 +49,5 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 
   return true; // keep the message channel open
 });
+
+console.log("[PF] AI response text:", data?.text);
