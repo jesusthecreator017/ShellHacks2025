@@ -5,13 +5,15 @@ const API_HEALTH = `${API_BASE}/health`;
 console.log("[PF] background loaded");
 chrome.runtime.onInstalled.addListener(() => console.log("[PF] installed"));
 
-// Listen for a message from content.js after a user clicks a button
+// Listen for messages from content.js
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  // Handle the initial prompt request from the popup
   if (msg?.type === "ASK") {
     console.log("[PF] received ASK:", msg.query);
 
     (async () => {
       let response = { ok: false, text: "", error: "An unexpected error occurred." };
+
       try {
         const h = await fetch(API_HEALTH);
         if (!h.ok) {
@@ -31,13 +33,16 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
             if (matches && matches.length > 0) {
               const cleanedMatches = matches.map(m => m.replace(/\*\*/g, "").trim());
-              // Store all steps in local storage
-              chrome.storage.local.set({ pathfinderSteps: cleanedMatches, currentStep: 0 });
-
-              // Send the first highlight immediately to the content script
-              chrome.tabs.sendMessage(sender.tab.id, {
-                action: "highlight",
-                text: cleanedMatches[0]
+              // Store all steps and the current step index in local storage
+              chrome.storage.local.set({ pathfinderSteps: cleanedMatches, currentStep: 0 }, () => {
+                console.log("[PF] Steps saved to storage:", cleanedMatches);
+                // Send the first highlight immediately to the active tab
+                if (sender?.tab?.id) {
+                  chrome.tabs.sendMessage(sender.tab.id, {
+                    action: "highlight",
+                    text: cleanedMatches[0]
+                  });
+                }
               });
             }
             response = { ok: true, text: responseText };
@@ -50,8 +55,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       }
     })();
     return true; // Keep the message channel open
-  } else if (msg?.action === "stepComplete") {
-    // A step was just completed, time to highlight the next one
+  }
+  // Handle the 'stepComplete' message from content.js after a user clicks
+  else if (msg?.action === "stepComplete") {
+    console.log("[PF] received stepComplete message.");
+
+    // Retrieve steps from storage
     chrome.storage.local.get(['pathfinderSteps', 'currentStep'], (result) => {
       const { pathfinderSteps, currentStep } = result;
 
@@ -62,11 +71,14 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
         // Update the current step in storage
         chrome.storage.local.set({ currentStep: nextStepIndex }, () => {
+          console.log(`[PF] Advancing to step ${nextStepIndex + 1}: ${nextStepText}`);
           // Send the next highlight to the current tab
-          chrome.tabs.sendMessage(sender.tab.id, {
-            action: "highlight",
-            text: nextStepText
-          });
+          if (sender?.tab?.id) {
+            chrome.tabs.sendMessage(sender.tab.id, {
+              action: "highlight",
+              text: nextStepText
+            });
+          }
         });
       } else {
         // No more steps to highlight, clean up storage
@@ -79,12 +91,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
 // Listener for page navigations/reloads
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (changeInfo.status === 'complete' && tab.url.startsWith('http')) {
-    // When the page loads, check if there are steps to highlight
+  if (changeInfo.status === 'complete' && tab.url && tab.url.startsWith('http')) {
     chrome.storage.local.get(['pathfinderSteps', 'currentStep'], (result) => {
       const { pathfinderSteps, currentStep } = result;
       if (pathfinderSteps && currentStep < pathfinderSteps.length) {
-        // Resend the highlight for the current step
+        console.log(`[PF] Page reloaded. Resending highlight for step ${currentStep + 1}: ${pathfinderSteps[currentStep]}`);
+        // Resend the highlight for the current step to the new page instance
         chrome.tabs.sendMessage(tabId, {
           action: "highlight",
           text: pathfinderSteps[currentStep]
